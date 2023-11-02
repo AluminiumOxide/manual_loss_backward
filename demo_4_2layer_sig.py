@@ -132,12 +132,12 @@ if __name__ == '__main__':
         dy2_x1 =  dy2_x2 * dx2_y1 * dy1_x1
         reshape_y2_x1 = (dy2_x1).view(2, 1)
         reshape_x1_w1 = dx1_w1.view(1, 4)
-        dy2_w1 = torch.matmul(reshape_y2_x1 , reshape_x1_w1)
+        dy2_w1 = torch.matmul(reshape_y2_x1, reshape_x1_w1)
 
-        err = (output[-1].data-target.data)*2
+        d_err = (output[-1].data - target.data) * 2
 
-        grad_w2 = err * dy2_w2
-        grad_w1 = err * dy2_w1
+        grad_w2 = d_err * dy2_w2
+        grad_w1 = d_err * dy2_w1
 
         loss.backward()
         print('梯度（自动）w1：',model.fc_1.weight.grad)

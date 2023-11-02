@@ -57,13 +57,10 @@ if __name__ == '__main__':
     criterion = nn.MSELoss()
     optimizer = optim.SGD(model.parameters(), lr=0.01)
 
-
     print(input.size())
     print(model.fc.weight.size())
     print(output.size())
     print(target.size())
-
-    # sys.exit()
 
     for epoch in range(100):
         optimizer.zero_grad()
@@ -72,14 +69,17 @@ if __name__ == '__main__':
         print(f'输入 {input.data} 输出 {output.data} 目标 {target.data} 损失 {loss.item()}')
         # print(model.fc.weight.grad)
 
-        dx_dw = input.data
+        dy_dw = input.data
+
+        d_err = 2 * (output.data - target.data)
+
         loss.backward()
 
         dot = draw_forward(input,output,target,model)
         dot.render('img_1_linear', format='png')
 
         print('梯度（自动）：',model.fc.weight.grad)
-        print('梯度 (手动)：', 2 * (output.data-target.data) * dx_dw )  # input.data 相当于d_output/d_w ,这里变成 2(out-tar)是因为 MSE2求导
+        print('梯度 (手动)：', d_err * dy_dw )
 
         print('权重（更新前）：',model.fc.weight)
         new_data = model.fc.weight.data  - 0.01 * model.fc.weight.grad

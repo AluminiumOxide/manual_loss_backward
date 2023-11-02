@@ -193,15 +193,16 @@ if __name__ == '__main__':
         dx1_w1_reshape = dx1_w1.view(4, 9)
         dy2_w1 = torch.matmul(dy2_x1_reshape, dx1_w1_reshape).view(3, 3)
 
-        err = (output[-1].data-target.data)*2
-        grad_w2 = err * dy2_w2
-        grad_w1 = err * dy2_w1
+        d_err = (output[-1].data - target.data) * 2
+
+        grad_w2 = d_err * dy2_w2
+        grad_w1 = d_err * dy2_w1
+
         loss.backward()
         print('梯度（自动）w2：',model.conv_2.weight.grad)
         print('梯度 (手动)w2：',grad_w2)
         print('梯度（自动）w1：',model.conv_1.weight.grad)
         print('梯度 (手动)w1：',grad_w1)
-
 
         print('权重（更新前）：',model.conv_1.weight.data)
         print('权重（更新前）：',model.conv_2.weight.data)

@@ -62,10 +62,10 @@ if __name__ == '__main__':
         reshape_dx1_dw1 = dx1_dw1.view(1, 4)
         dz_dw1 = torch.matmul(reshape_dy2_dx1 , reshape_dx1_dw1)
 
-        err = (output[-1].data-target.data)*2
+        d_err = (output[-1].data - target.data) * 2
 
-        grad_w2 = err * dz_dw2
-        grad_w1 = err * dz_dw1
+        grad_w2 = d_err * dz_dw2
+        grad_w1 = d_err * dz_dw1
 
         loss.backward()
         print('梯度（自动）w1：',model.fc_1.weight.grad)

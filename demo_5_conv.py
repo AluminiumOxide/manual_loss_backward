@@ -14,7 +14,6 @@ class SimpleLayer(nn.Module):
         # self.fc_2 = nn.Linear(channel_out, channel_out, bias=False)
         self.init_weights()
 
-
     def init_weights(self):
         # 使用torch.arange生成整数张量
         self.conv_1.weight.data = (torch.arange(9)/10).float().view(self.conv_1.weight.shape)
@@ -39,40 +38,31 @@ def manual_conv(input, weight):
     # 创建输出张量
     manual_x1 = torch.zeros(batch_size, 1, output_height, output_width)
 
-    d_x1 = torch.zeros([output_height, output_width,
-                        input.size(2),input.size(3)])
     d_w1 = torch.zeros([output_height, output_width,
                         weight.size(2),weight.size(3)])
-    # 执行卷积操作
-    for i in range(output_height):
-        for j in range(output_width):
-            manual_x1[0, 0, i, j] = torch.sum(input[0, 0, i:i + kernel_size, j:j + kernel_size] * weight)
+    d_x1 = torch.zeros([output_height, output_width,
+                        input.size(2),input.size(3)])
+    # 卷积操作
+    for hy in range(output_height):
+        for wy in range(output_width):
+            manual_x1[0, 0, hy, wy] = torch.sum(input[0, 0, hy:hy + kernel_size, wy:wy + kernel_size] * weight)
     """
     对于单层的来说,
     每个w，每个位置了挪了多少个，相当于 output_height × output_width 次乘法计算，现在要做的就是把这些位置的内容求和，你就能得到这里w的梯度了
     对于x，每个位置经历多少次卷积核的计算，把W求和，就能得到这里x的梯度了
     """
-    for hy in range(manual_x1.size(2)):  # h_out 对应输出的高度
-        for wy in range(manual_x1.size(3)):  # w_out 对应输出的宽度
-            for hw in range(kernel_size):  # H 对应W的高度
-                for ww in range(kernel_size):  # W 对应W的宽度
-                    d_w1[hy, wy, hw, ww] = input[0, 0, hy+hw, wy+ww]
+    for hy in range(manual_x1.size(2)):  # 输出y高度
+        for wy in range(manual_x1.size(3)):  # 输出y宽度
+            d_w1[hy, wy,0:kernel_size, 0:kernel_size] = input[0, 0, hy:hy+kernel_size, wy:wy+kernel_size]
 
-
-    for i in range(output_height):  # H
-        for j in range(output_width):  # W
-            d_x1[i, j, i:i + kernel_size, j:j + kernel_size] += weight[0,0,0:kernel_size, 0:kernel_size]
-
-    # for i in range(output_height):  # H
-    #     for j in range(output_width):  # W
-    #         d_x1[0, 0, i:i + kernel_size, j:j + kernel_size] += weight[0,0,0:kernel_size, 0:kernel_size]
-    #         # d_x1[0, 0, i, j] = torch.sum(input[0, 0, i:i + kernel_size, j:j + kernel_size] * w1)
+    for hy in range(output_height):  # 输出y高度
+        for wy in range(output_width):  # 输出y宽度
+            d_x1[hy, wy, hy:hy + kernel_size, wy:wy + kernel_size] += weight[0,0,0:kernel_size, 0:kernel_size]
 
     return [manual_x1,d_x1,d_w1]
 
 
 if __name__ == '__main__':
-    # input = torch.randn(1, 1, 5, 5)
     input = torch.reshape(torch.arange(1,17), (1, 1, 4, 4))/10
     model = SimpleLayer(1,1,1)
     target = torch.tensor([1]).view(1,1,1,-1).to(torch.float32)
@@ -81,7 +71,7 @@ if __name__ == '__main__':
 
     # sys.exit()
 
-    for epoch in range(100):
+    for epoch in range(2):
         optimizer.zero_grad()
         output = model(input)
         loss = criterion(output[-1], target)
@@ -98,7 +88,6 @@ if __name__ == '__main__':
         y1 = output[1].data  # x1 > sig > y1
         x2 = output[2].data   # y1 > conv > x2 with w2
         y2 = output[3].data   # x2 > sig > y2
-
         # 输出 y=f(x,w) dy/dx dy/dw
         dy2_x2 = y2*(1-y2)
         [manual_x2,dx2_y1,dx2_w2] = manual_conv(y1,w2)
@@ -112,10 +101,10 @@ if __name__ == '__main__':
         dx1_w1_reshape = dx1_w1.view(4, 9)
         dy2_w1 = torch.matmul(dy2_x1_reshape, dx1_w1_reshape).view(3, 3)
 
-        err = (output[-1].data-target.data)*2
+        d_err = (output[-1].data - target.data) * 2
 
-        grad_w2 = err * dy2_w2
-        grad_w1 = err * dy2_w1
+        grad_w2 = d_err * dy2_w2
+        grad_w1 = d_err * dy2_w1
 
         loss.backward()
         print('梯度（自动）w2：',model.conv_2.weight.grad)
@@ -123,18 +112,18 @@ if __name__ == '__main__':
 
         print('梯度（自动）w1：',model.conv_1.weight.grad)
         print('梯度 (手动)w1：',grad_w1)
-        break
 
-        print('权重（更新前）：',model.fc_1.weight.data)
-        print('权重（更新前）：',model.fc_2.weight.data)
+
+        print('权重（更新前）：',model.conv_1.weight.data)
+        print('权重（更新前）：',model.conv_2.weight.data)
         # new_data = model.fc.weight.data[0, 0]  - 0.01 * model.fc.weight.grad[0, 0]
-        new_data_1 = model.fc_1.weight.data  - 0.01 * grad_w1
-        new_data_2 = model.fc_2.weight.data  - 0.01 * grad_w2
+        new_data_1 = model.conv_1.weight.data  - 0.01 * grad_w1
+        new_data_2 = model.conv_2.weight.data  - 0.01 * grad_w2
         print('权重（手动）w1：',new_data_1)
         print('权重（手动）w2：',new_data_2)
         optimizer.step()
-        print('权重（更新后）w1：',model.fc_1.weight.data)
-        print('权重（更新后）w2：',model.fc_2.weight.data)
+        print('权重（更新后）w1：',model.conv_1.weight.data)
+        print('权重（更新后）w2：',model.conv_2.weight.data)
 
         print('---'*20)
         break

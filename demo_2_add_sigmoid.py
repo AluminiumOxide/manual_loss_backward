@@ -87,9 +87,13 @@ if __name__ == '__main__':
 
         dy1_dx1 = y1 * (1 - y1)
         dx1_dw1 = input.data
+
         dy1_dw1 = dy1_dx1 * dx1_dw1
-        err = (output[-1].data-target.data) * 2
-        grad = err * dy1_dw1
+
+        d_err = (output[-1].data - target.data) * 2
+
+        grad = d_err * dy1_dw1
+
         loss.backward()
         print('梯度（自动）：',model.fc.weight.grad)
         print('梯度 (手动)：',grad) # 这里相当于 df/dw[i] 这个偏导只是 x[i] 的值，这个值
